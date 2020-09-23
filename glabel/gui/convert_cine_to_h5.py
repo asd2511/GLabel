@@ -4,7 +4,6 @@ from pathlib import Path
 from PyQt5.QtCore import QCoreApplication, QThreadPool, Qt
 from joblib import Parallel, delayed
 import numpy as np
-from tqdm import tqdm
 import flammkuchen as fl 
 from PyQt5.QtWidgets import QFileDialog, QApplication, QDialog, QPushButton, QVBoxLayout, QProgressDialog
 
@@ -195,7 +194,6 @@ def convert_file(filename, prog_dlg=None, prog_clb=None, msg_clb=None, cnc_clb=N
         real_ims = []
 
         # Iterate over offsets
-        # for count, i in tqdm(enumerate(im_offsets), total=len(im_offsets)):
         for count, i in enumerate(im_offsets):
             if prog_dlg:
                 prog_dlg.setValue(count)

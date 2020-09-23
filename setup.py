@@ -17,6 +17,7 @@ setuptools.setup(
         "scikit-learn==0.22.1",
         "scikit-video",
         "scipy==1.1.0",
+        "numpy==1.18.1",
         "albumentations==0.4.5",
         "efficientnet==1.1.0",
         "flammkuchen==0.9.2",
