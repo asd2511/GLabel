@@ -1,0 +1,44 @@
+{
+    "meta_data": {
+        "time (UTC)": "25.02.20 12:39:36",
+        "user": "Tester",
+        "account": "zilli"
+    },
+    "config": {
+        "keybinds": {
+            "DeleteActiveROI": "Del",
+            "DeleteAllROI": "Shift+Del",
+            "ActivateNextROI": "E",
+            "ActivatePreviousROI": "Q",
+            "MoveROIUp": "W",
+            "MoveROIDown": "S",
+            "MoveROIRight": "D",
+            "MoveROILeft": "A",
+            "NextFrame": "3",
+            "PreviousFrame": "1",
+            "CopyNextROI": "J",
+            "CopyPreviousROI": "H",
+            "CopyROIsToAll": "Ctrl+0",
+            "ToggleROIVisibility": "V",
+            "FindNewSuturePositions": "T",
+            "FindNearestDark": "Z",
+            "Test": "Ctrl+C"
+        },
+        "settings": {
+            "Filename": "TestFilePath",
+            "SaveFile": "TestSavePath",
+            "StackDimensions": 107,
+            "NumRows": 7,
+            "NumCols": 5,
+            "StereoGrid": true,
+            "AutoMode": 0,
+            "AutoSnaking": true,
+            "AutoCopy": false,
+            "NumRowsTrack": 7,
+            "ROIColor": "#000000",
+            "ActiveColor": "#00ff00",
+            "ShowCloseup": true,
+            "ROISnap": false
+        }
+    }
+}
