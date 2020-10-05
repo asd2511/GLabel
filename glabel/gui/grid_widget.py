@@ -413,7 +413,7 @@ class ButtonGrid(GridWidget):
         """
         # Style button with with custom radio button image to indicate position as not set
         self.grid_buttons.button(grid_id).setStyleSheet('QRadioButton::indicator::unchecked { image: url('
-                                                        'gui/radio_unchecked.png); };')
+                                                        'glabel/gui/radio_unchecked.png); };')
         self.placements[grid_id] = False
 
     def get_cur_1d(self) -> int:
