@@ -8,6 +8,7 @@ import flammkuchen as fl
 from PyQt5.QtWidgets import QFileDialog, QApplication, QDialog, QPushButton, QVBoxLayout, QProgressDialog
 
 from glabel.gui import worker
+from glabel.gui.cine import tagCINEFILEHEADER, tagBITMAPINFOHEADER, INT64_T, Image
 
 UINT8_T = "B"
 CHAR = "c"
@@ -22,129 +23,6 @@ DOUBLE = "d"
 CHAR_ARR = "s"
 
 
-def unpack(h, fmt="i"):
-    """Quick unpack from bytes"""
-    size = struct.calcsize(fmt)
-    return struct.unpack(fmt, h[:size]), h[size:]
-
-
-class tagCINEFILEHEADER(object):
-    """CINE path header"""
-    def __init__(self):
-        pass
-    
-    def __len__(self):
-        return 44
-    
-    def build(self, h):
-        self.Type, h = unpack(h, CHAR+CHAR)
-        self.Type = self.Type[0]+self.Type[1]
-        
-        self.Headersize, h = unpack(h, UINT16_T)
-        self.Compression, h = unpack(h, UINT16_T)
-        self.Version, h = unpack(h, UINT16_T)
-        self.FirstMovieImage, h = unpack(h, INT32_T)
-        self.TotalImageCount, h= unpack(h, UINT32_T)
-        self.FirstImageNo, h = unpack(h, INT32_T)
-        self.ImageCount, h = unpack(h, UINT32_T)
-        self.OffImageHeader, h = unpack(h, UINT32_T)
-        self.OffSetup, h = unpack(h, UINT32_T)
-        self.OffImageOffsets, h = unpack(h, UINT32_T)
-        self.TriggerTime, h = unpack(h, UINT32_T+UINT32_T)
-
-
-class tagBITMAPINFOHEADER:
-    """Bitmap header"""
-    def __len__(self):
-        return 40
-
-    def __init__(self):
-        pass
-    
-    def build(self, h):
-        self.biSize, h = unpack(h, UINT32_T)
-        self.biWidth, h = unpack(h, INT32_T)
-        self.biHeight, h = unpack(h, INT32_T)
-        self.biPlanes, h = unpack(h, UINT16_T)
-        self.biBitCount, h = unpack(h, UINT16_T)
-        self.biCompression, h = unpack(h, UINT32_T)
-        self.biSizeImage, h = unpack(h, UINT32_T)
-        self.biXPelsPerMeter, h = unpack(h, INT32_T)
-        self.biYPelsPerMeter, h = unpack(h, INT32_T)
-        self.biClrUsed, h = unpack(h, UINT32_T)
-        self.biClrImportant, h = unpack(h, UINT32_T)
-        
-    def show(self):
-        print("biSize :", self.biSize)
-        print("biWidth :", self.biWidth)
-        print("biHeight :", self.biHeight)
-        print("biPlanes :", self.biPlanes)
-        print("biBitCount :", self.biBitCount)
-        print("biCompression :", self.biCompression)
-        print("biSizeImage :", self.biSizeImage)
-        print("biXPelsPerMeter :", self.biXPelsPerMeter)
-        print("biYPelsPerMeter :", self.biYPelsPerMeter)
-        print("biClrUsed :", self.biClrUsed)
-        print("biClrImportant :", self.biClrImportant)
-
-
-def conv_10_bit(im_raw):
-    ''' Generate 10 bit (unsigned) integers from a binary source
-    
-    im_raw: 
-        bytes
-        
-    return:
-        list of (unsigned) integers'''
-    
-    im = []
-    
-    for i in range(0, len(im_raw), 5):
-        b = im_raw[i:i+5]
-        n = int.from_bytes(b, 'big')
-
-        #Split n into 4 10 bit integers
-        t = []
-        
-        for i in range(4):
-            t.append(n & 0x3ff)
-            # Bitshift by 10 bits
-            n >>= 10
-            
-        # Reverse bits, otherwise it is corrupted (little vs big endian)
-        im.extend(reversed(t))
-        
-    return im
-
-
-class Image:
-    """Creates an image from raw byte stream"""
-    def __init__(self, h, width, height, bits=10):
-        annotation_size, h = unpack(h, UINT32_T)
-        annotation_size = annotation_size[0]
-        
-        # Remove annotation header (4 bytes for annot. length)
-        h = h[annotation_size-4:]
-        
-        self.width = width
-        self.height = height
-        self.bits = bits
-        self.src = self.build(h)
-        
-    def build(self, h):
-        if self.bits == 10:
-            return np.asarray(conv_10_bit(h), 
-                        dtype=np.uint16).reshape(self.height, self.width)
-        
-        elif self.bits == 8:
-            return np.frombuffer(h,
-                        dtype=np.uint8).reshape(self.height, self.width)
-        
-        else:
-            print("Not implemented...")
-            return None
-
-
 class ModeDialog(QDialog):
     def __init__(self):
         super().__init__()
@@ -157,6 +35,8 @@ class ModeDialog(QDialog):
         self.file_btn.clicked.connect(lambda: self.set_mode('path'))
         self.dir_btn = QPushButton("Convert all in Directory")
         self.dir_btn.clicked.connect(lambda: self.set_mode('dir'))
+        # TODO: Implement batch conversion
+        self.dir_btn.setEnabled(False)
 
         self.layout.addWidget(self.file_btn)
         self.layout.addWidget(self.dir_btn)
@@ -169,6 +49,7 @@ class ModeDialog(QDialog):
 
 def convert_file(filename, prog_dlg=None, prog_clb=None, msg_clb=None, cnc_clb=None):
     print(f"Converting {filename}... to {filename[:-5]}.h5")
+
     if filename:
         with open(filename, "rb") as fp:
             h = fp.read()
@@ -196,6 +77,8 @@ def convert_file(filename, prog_dlg=None, prog_clb=None, msg_clb=None, cnc_clb=N
         # Iterate over offsets
         for count, i in enumerate(im_offsets):
             if prog_dlg:
+                if prog_dlg.wasCanceled():
+                    return
                 prog_dlg.setValue(count)
                 prog_dlg.setLabelText(f"{count} / {len(im_offsets)}")
 
@@ -215,6 +98,8 @@ def convert_file(filename, prog_dlg=None, prog_clb=None, msg_clb=None, cnc_clb=N
 
         # Save as hdf5
         print("Save real images as hdf5...")
+        if prog_dlg:
+            prog_dlg.setLabelText("Saving converted image data...")
         fl.save(filename[:-5]+".h5", dict(ims=real_ims), compression=('blosc', 9))
         print("Done!")
 
@@ -269,6 +154,7 @@ def run_as_modal(mw):
     prog_dlg.show()
 
     thread_worker = worker.Worker(convert_file, files, prog_dlg)
+    thread_worker.signals.finished.connect(lambda: prog_dlg.setValue(prog_dlg.maximum()))
 
     mw.threadpool.start(thread_worker)
 
