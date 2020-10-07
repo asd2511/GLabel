@@ -1,6 +1,12 @@
 __pycache__/
+# IDEs
 .idea/
 .vscode
+# Virtual envs
 venv
 ./venv
+# GLabel configuration
 .suturelab
+# Sphinx documentation
+docs/build
+docs/source/_build
