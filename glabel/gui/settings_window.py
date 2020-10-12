@@ -9,19 +9,31 @@ from glabel.gui import gui_utils
 
 
 class GridSettings(QDialog):
+    """
+    Custom :pyqt:`QDialog <qdialog>` for displaying and changing settings relating to the :class:`~gui.grid_widget.GridWidget` class.
+    """
 
+    #: Dictionary mapping integer values to style of used :class:`~gui.grid_widget.GridWidget`.
     GridStyles = {0: 'Buttons',
                   1: 'Pixelmap'}
 
     def __init__(self, cur_rows, cur_cols, cur_stereo, cur_style):
+        """
+        Initialize new :pyqt:`QDialog <qdialog>` for setting :class:´~gui.grid_widget.GridWidget` settings.
+
+        :param int cur_rows: Currently set number of grid rows.
+        :param int cur_cols: Currently set number of grid columns.
+        :param bool cur_stereo: Current setting for stereoscopic grid.
+        :param int cur_style: Currently set style for displaying grid widget. Available values determined by :attr:`GridStyles`.
+        """
         super().__init__()
         self.setWindowTitle("Grid Settings")
 
-        self.rows = cur_rows
-        self.cols = cur_cols
-        self.stereo = cur_stereo
+        self.rows = cur_rows  #: Set number of rows
+        self.cols = cur_cols  #: Set number of columns
+        self.stereo = cur_stereo  #: Set stereoscopy of grid
         assert cur_style in self.GridStyles, "Invalid GridStyle encountered when initializing GridSettings!"
-        self.grid_style = self.GridStyles[cur_style]
+        self.grid_style = self.GridStyles[cur_style]  #: Set style of grid widget
 
         # self.layout = QVBoxLayout()
         self.layout = QGridLayout()
@@ -62,12 +74,24 @@ class GridSettings(QDialog):
         self.setLayout(self.layout)
 
     def text_entered(self):
+        """
+        Function acting as pyqtslot for enabling/disabling the accept button.
+
+        The settings window should not accept settings that have the number of rows or columns set to nothing.
+        This slot makes sure that the `accept` button is only available when valid values are entered.
+        """
         if self.row_edit.text() != '' and self.col_edit.text() != '':
             self.buttonBox.setDisabled(False)
         else:
             self.buttonBox.setDisabled(True)
 
     def confirm(self):
+        """
+        Pyqtslot being called upon user confirmation of settings.
+
+        Will update :attr:`rows`, :attr:`cols`, :attr:`stereo` and :attr:`grid_style` attributes to
+        allow grabbing the updated settings.
+        """
         self.rows = self.row_edit.text()
         self.cols = self.col_edit.text()
         self.stereo = self.stereo_check.isChecked()
@@ -77,7 +101,11 @@ class GridSettings(QDialog):
 
 
 class ShortcutSettings(QDialog):
+    """
+    Custom :pyqt:`QDialog <qdialog>` for displaying and changing settings relating to all keyboard shortcuts used in :meth:`~gui.image_widget.ImageStack.init_shortcuts`.
+    """
 
+    #: Dictionary mapping shorcut keys to descriptor texts used in the settings window.
     SC_Descs = {
         "DeleteActiveROI": "Delete currently selected ROI",
         "DeleteAllROI": "Delete all ROIs on the current frame",
@@ -107,10 +135,15 @@ class ShortcutSettings(QDialog):
     }
 
     def __init__(self, shortcuts):
+        """
+        Initialize new :pyqt:`QDialog <qdialog>` for setting shortcut settings.
+
+        :param dict shortcuts: Currently set dictionary mapping keyboard keys to shortcuts.
+        """
         super().__init__()
         self.setWindowTitle("Shortcut Settings")
 
-        self.shortcut_dict = shortcuts
+        self.shortcut_dict = shortcuts  #: Dictionary holding the updated shortcut mappings for grabbing from external
 
         self.layout = QGridLayout()
 
@@ -134,6 +167,9 @@ class ShortcutSettings(QDialog):
         self.setLayout(self.layout)
 
     def set_shortcuts(self):
+        """
+        Function acting as pyqtslot for when user accepts currently applied shortcut settings.
+        """
         action_names = list(self.shortcut_dict.keys())
 
         self.shortcut_dict = {}
@@ -145,7 +181,12 @@ class ShortcutSettings(QDialog):
 
 
 class AutomationSettings(QDialog):
+    """
+    Custom :pyqt:`QDialog <qdialog>` for displaying and changing settings relating to automation settings for
+    semi-automatic and manual labeling methods.
+    """
 
+    #: Dictionary mapping int values to available modes for changing active grid position during manual labeling.
     ActiveProgessModes = {0: 'On empty frame and ROI placement',
                           1: 'Only on empty frame',
                           2: 'Only on ROI placement',
@@ -153,16 +194,33 @@ class AutomationSettings(QDialog):
 
     def __init__(self, max_rows, mode, snaking, auto_copy, num_rows_track, begin_top, cur_active_progress,
                  frame_clicking):
+        """
+        Initialize new :pyqt:`QDialog <qdialog>` for setting automation settings.
+
+        :param int max_rows: Number of rows available in grid.
+        :param int mode: Mode for grid pathing. Currently supports only values {0, 1, 2} representing {Free, Row-wise,
+            Column-wise}, respectively.
+        :param bool snaking: Boolean setting for enabling snaking progression through grid.
+        :param bool auto_copy: Boolean setting for enabling automatic copying of all set ROIs to next empty frame upon
+            switching to it.
+        :param int num_rows_track: Number of rows that try to track their annotated suture when using `copy and track`
+            features.
+        :param bool begin_top: Boolean setting enabling grid pathing to begin at top left instead of bottom left.
+        :param int cur_active_progress: Currently set progress mode for active grid position. Currently supports only
+            values {0, 1, 2, 3} as described by :attr:`ActiveProgressModes`.
+        :param bool frame_clicking: Boolean setting enabling "frame clicking", the fastest found method for manual
+            suture annotation.
+        """
         super().__init__()
         self.setWindowTitle("Automation Settings")
 
-        self.mode = mode
-        self.snaking = snaking
-        self.auto_copy = auto_copy
-        self.num_rows_track = num_rows_track
-        self.begin_top = begin_top
-        self.active_progress_mode = cur_active_progress
-        self.frame_clicking = frame_clicking
+        self.mode = mode  #: Mode for grid pathing progression
+        self.snaking = snaking  #: Boolean value for enabling snaking grid pathing
+        self.auto_copy = auto_copy  #: Boolean value for enabling automatic copying of all ROIs to next empty frame
+        self.num_rows_track = num_rows_track  #: Number of rows that track sutures using copy-and-track features
+        self.begin_top = begin_top  #: Boolean value for enabling grid pathing to begin at top-left
+        self.active_progress_mode = cur_active_progress  #: Value for active grid position progression mode
+        self.frame_clicking = frame_clicking  #: Boolean value for enabling "frame clicking" mode
 
         self.layout = QGridLayout()
 
@@ -262,6 +320,14 @@ class AutomationSettings(QDialog):
         self.setLayout(self.layout)
 
     def set_mode(self, mode):
+        """
+        Custom PyQtSlot for catching and handling user changes in the selection of grid progression mode.
+
+        This slot will receive the updated value for the selected progression mode, update :attr:`mode` and handle
+        special cases for disabling setting options based on the selection.
+
+        :param int mode: New value for the progression mode. This will be emitted by the selected radio button.
+        """
         self.mode = mode
 
         if self.mode == 0:
@@ -277,18 +343,35 @@ class AutomationSettings(QDialog):
             self.begin_label.setEnabled(True)
 
     def set_snaking(self):
+        """
+        Slot for updating :attr:`snaking` with new selected value.
+        """
         self.snaking = self.snake_box.isChecked()
 
     def set_autocopy(self):
+        """
+        Slot for updating :attr:`auto_copy` with new selected value.
+        """
         self.auto_copy = self.copy_box.isChecked()
 
     def set_num_rows_track(self):
+        """
+        Slot for updating :attr:`num_rows_track` with new selected value.
+        """
         self.num_rows_track = self.auto_track_box.value()
 
     def set_begin(self):
+        """
+        Slot for updating :attr:`begin_top` with new selected value.
+        """
         self.begin_top = self.begin_box.isChecked()
 
     def set_active_progress(self):
+        """
+        Slot for updating :attr:`active_progress_mode` with new selected value.
+
+        Will also handle enabling/disabling mode selection for "frame clicking" based on the selection made.
+        """
         self.active_progress_mode = self.active_progress_box.currentIndex()
         if self.active_progress_mode == 3:
             self.frame_click_box.setEnabled(True)
@@ -298,6 +381,9 @@ class AutomationSettings(QDialog):
             self.set_frame_click()
 
     def set_frame_click(self):
+        """
+        Slot for updating :attr:`frame_clicking` with new selected value.
+        """
         self.frame_clicking = self.frame_click_box.isChecked()
 
 

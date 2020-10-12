@@ -33,6 +33,9 @@ GUI
     gui.calibration_window.CalibrationWidget
     gui.calibration_window.CubeCalibrator
     gui.calibration_window.CalibrationEdges
+    gui.settings_window.GridSettings
+    gui.settings_window.ShortcutSettings
+    gui.settings_window.AutomationSettings
 
 Automation
 ^^^^^^^^^^
