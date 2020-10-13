@@ -9,6 +9,7 @@ import h5py
 from typing import List
 from itertools import product
 
+import numpy as np
 from PyQt5.QtWidgets import QFileDialog, QSpinBox, QComboBox, QFormLayout, QDialog, QLabel, QVBoxLayout, QPushButton, \
     QDialogButtonBox
 from PyQt5.QtCore import Qt, QPointF
@@ -504,6 +505,44 @@ def load_cube_calibration(calib_file):
     calibration_file = calibration.pop('calibration_file')
 
     return calibration, calibration_file
+
+
+def save_3d_data_csv(surf_points, fpath) -> None:
+    """
+    Save the calculated 3D surface points as .csv format.
+
+    :param np.ndarray surf_points: Reconstructed 3D surface points.
+    :param str fpath: Filepath to save data to.
+    """
+    with open(fpath, 'w') as f:
+        f.write(f'# 3D surface data array shape: {surf_points.shape}\n')
+
+        for f_idx, frame in enumerate(surf_points):
+            f.write(f'# Frame {f_idx}:\n')
+            np.savetxt(f, frame, fmt='%.3f', delimiter=',')
+
+
+def save_3d_data_json(surf_points, fpath) -> None:
+    """
+    Save the calculated 3D surface points as .json format.
+
+    :param np.ndarray surf_points: Reconstructed 3D surface points.
+    :param str fpath: Filepath to save data to.
+    """
+    surf_dict = {f'frame {i}': fd.tolist() for i, fd in enumerate(surf_points)}
+
+    with open(fpath, 'w') as f:
+        json.dump(surf_dict, f, indent=4)
+
+
+def save_3d_data_npy(surf_points, fpath) -> None:
+    """
+    Save the calculated 3D surface points as .npz format.
+
+    :param np.ndarray surf_points: Reconstructed 3D surface points.
+    :param str fpath: Filepath to save data to.
+    """
+    np.save(fpath, surf_points, allow_pickle=False)
 
 
 class OptionDialog(QDialog):

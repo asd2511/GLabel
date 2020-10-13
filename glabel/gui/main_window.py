@@ -113,6 +113,10 @@ class Main(QMainWindow):
         self.analyze_m = self.menu.addMenu("&Analyze")
         self.analyze_m.addAction("&Calibration", self.show_calibration_window)
         self.analyze_m.addAction("Reconstruct 3D Surface", self.show_3d_surf)
+        self.analyze_m.addAction("Export 3D Data...", self.export_3d_data)
+        # Disable the use of displaying and exporting 3D data initially. These should only become active after the data
+        # was calculated.
+        self.analyze_m.actions()[-2].setEnabled(False)
         self.analyze_m.actions()[-1].setEnabled(False)
         # 'NN' menu
         self.nn_m = self.menu.addMenu("&Magic")
@@ -625,6 +629,41 @@ class Main(QMainWindow):
         self.status.showMessage("Export done!", 2000)
         self.status.showMessage(self.filename)
 
+    def export_3d_data(self) -> None:
+        """
+        Export calculated 3D surface data to .csv, .json or .npy format.
+        """
+        # Error-handling for when surface data has not been calculated yet
+        if self.image_stack.surf_points is None:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Error")
+            msg.setInformativeText('No surface data calculated!')
+            msg.setWindowTitle("Error")
+            msg.exec_()
+            return
+
+        # Ask user for path to save to
+        save_path, fmt_long = QFileDialog.getSaveFileName(
+            self,
+            caption="Export 3D surface data",
+            directory=os.getcwd() + '/' + self.filename.rsplit('.', 1)[0] + '.csv',
+            filter="Comma-separated values (*.csv);;Javascript Object Notation (*.json);;Binary Numpy (*.npy)",
+            initialFilter=".csv",
+        )
+        if not save_path:
+            return
+
+        # Handling of saving as .csv or .json file
+        if ".csv" in fmt_long:
+            gui_utils.save_3d_data_csv(self.image_stack.surf_points, save_path)
+        elif ".json" in fmt_long:
+            gui_utils.save_3d_data_json(self.image_stack.surf_points, save_path)
+        elif ".npy" in fmt_long:
+            gui_utils.save_3d_data_npy(self.image_stack.surf_points, save_path)
+        else:
+            raise ValueError(f"Wrong format {fmt_long} encountered when saving 3D surface data!")
+
     def get_save_dict(self) -> dict:
         """
         Construct dictionary used for saving current data and setup.
@@ -961,6 +1000,7 @@ class Main(QMainWindow):
         """
         self.calibration = calibration
         self.image_stack.surface_f = surface.get_optimized_F(calibration)
+        self.analyze_m.actions()[-2].setEnabled(True)
         self.analyze_m.actions()[-1].setEnabled(True)
         gui_utils.save_cube_calibration(calibration, self.calibration_file)
 
