@@ -42,6 +42,7 @@ class Main(QMainWindow):
             hard-coded and must be changed depending on your directory structure.
         """
         super().__init__()
+        self.setWindowIcon(QtGui.QIcon(os.path.dirname(os.path.realpath(__file__)) + os.path.sep + '64.png'))
 
         requires_login = True if not debug else False
         self.user = None if not debug else 'Debug'  #: Username as entered in Login Window
@@ -1376,6 +1377,7 @@ class LoginWindow(QDialog):
         super().__init__()
 
         self.setWindowTitle("Login")
+        self.setWindowIcon(QtGui.QIcon(os.path.dirname(os.path.realpath(__file__)) + os.path.sep + '64.png'))
 
         self.layout = QGridLayout()
 
