@@ -10,13 +10,31 @@ from glabel.analysis import utils
 
 
 class SurfaceViewer(QMainWindow):
-    """Window for displaying surface data in 3D"""
+    """
+    Window for displaying surface data in 3D
 
-    data_changed = pyqtSignal(np.ndarray)
-    frame_changed = pyqtSignal(int)
-    close_signal = pyqtSignal()
+    **Bases** :pyqt:`QMainWindow <qmainwindow`.
+
+    Creates a separate GUI window for display and interaction with calculated 3D surface data.
+
+    .. todo::
+
+        Functionality is still limited and not finalized.
+    """
+
+    data_changed = pyqtSignal(np.ndarray)  #: PyQtSignal emitting np.ndarray surface data when set in Viewer.
+    frame_changed = pyqtSignal(int)  #: PyQtSignal emitting frame index of newly displayed frame.
+    close_signal = pyqtSignal()  #: PyQtSignal triggered upon closing of this window.
 
     def __init__(self, rows, cols, *args, **kwargs):
+        """
+        Create a new window for display of 3D surface data.
+
+        :param int rows: Number of rows in suture grid.
+        :param int cols: Number of columns in suture grid.
+        :param args: Further arguments are passed on to :pyqt:`QMainWindow <qmainwindow>` initializer.
+        :param kwargs: Further keyword arguments are passed on to :pyqt:`QMainWindow <qmainwindow>` initializer.
+        """
         super().__init__(*args, **kwargs)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.setWindowTitle("Surface Viewer")
@@ -27,7 +45,7 @@ class SurfaceViewer(QMainWindow):
         self.widget = QWidget(self)
         self.layout = QHBoxLayout(self)
 
-        self.view = gl.GLViewWidget()
+        self.view = gl.GLViewWidget()  #: :class:`GLViewWidget <pyqtgraph.GLViewWidget>` for displaying 3D data
         self.view.setMinimumSize(768, 768)
         self.disp_plot = None  # type: DisplacementPlot
 
@@ -35,16 +53,18 @@ class SurfaceViewer(QMainWindow):
         self.grid = None
         self.toggle_grid()
 
-        self.rows = rows
-        self.cols = cols
-        self.frame_id = None  # Currently shown frame
-        self.raw_points = None  # Raw, unprocessed points used for resetting current data
-        self.surf_verts = None  # Surface points used as mesh vertices
-        self.surf_faces = None  # Faces based on the vertices making up the mesh surface
-        self.mesh = None  # Mesh object added to the view
-        self.column_line = None  # LinePlot highlighting a single column for which the displacement is shown
-        self.roi_scatter = None  # 3D scatter points to visualize ROI placements
-        self.roi_colors = None  # List of (N, 4) floats for coloring the 3D scatterpoints indicating ROIs
+        self.rows = rows  #: Number of suture grid rows
+        self.cols = cols  #: Number of suture grid columns
+        self.frame_id = None  #: Currently shown frame
+        self.raw_points = None  #: Raw, unprocessed points used for resetting current data
+        self.surf_verts = None  #: Surface points used as mesh vertices
+        self.surf_faces = None  #: Faces based on the vertices making up the mesh surface
+        self.mesh = None  #: Mesh object added to the view
+        #: :class:`GLLinePlotItem <pyqtgraph.GLLinePlotItem>` highlighting a single column for which the displacement is
+        #: shown
+        self.column_line = None
+        self.roi_scatter = None  #: :class:`GLScatterPlotItem <pyqtgraph.GLScatterPlotItem>` to visualize ROI placements
+        self.roi_colors = None  #: List of (N, 4) floats for coloring the 3D scatterpoints indicating ROIs
 
         #: Boolean setting if missing ROIs should be interpolated. If set to False, missing grid positions will be
         #: filled with their nearest neighbor coordinate still allow building the surface mesh.
@@ -59,7 +79,20 @@ class SurfaceViewer(QMainWindow):
         self.widget.setLayout(self.layout)
         self.setCentralWidget(self.widget)
 
-    def process_data(self, surf_points):
+    def process_data(self, surf_points) -> np.ndarray:
+        """
+        Preprocess surface data for visualization.
+
+        Processing performed includes:
+
+        * (optional) interpolation of missing ROIs
+        * Pseudo-normalization to avoid irregular scaling of surface data (subtracting mean and rescaling to [0, 10]
+            range)
+        * Dropping the last (fourth) dimension of data created in reconstruction process
+
+        :param np.ndarray surf_points: 3D surface points to visualize as surface.
+        :return: Processed surface data points.
+        """
         points = utils.interpolate_missing_rois(surf_points, self.rows, self.cols, use_nearest=not self.interpolation,
                                                 interp_function=self.interp_function)
         points = points - np.mean(points, axis=1)[:, None, :]  # Subtract mean from each x, y, z point
@@ -72,20 +105,36 @@ class SurfaceViewer(QMainWindow):
 
         return points
 
-    def set_data(self, surf_points):
+    def set_data(self, surf_points) -> None:
+        """
+        Set data to visualize as 3D surface.
+
+        :param np.ndarray surf_points: The calculated surface data to visualize.
+        """
         self.raw_points = surf_points.copy()
         surf_points = self.process_data(surf_points)
-        self.surf_verts = surf_points
-        self.surf_faces = self.calculate_face_idcs()
-        self.data_changed.emit(self.surf_verts)
+        self.surf_verts = surf_points  # Vertices are 1:1 data points
+        self.surf_faces = self.calculate_face_idcs()  # Faces are calculated between vertices based on grid indices
+        self.data_changed.emit(self.surf_verts)  # Emit signal indicating that data was updated
 
-    def show_frame(self, frame_id):
+    def show_frame(self, frame_id) -> None:
+        """
+        Visualize the specified frame of surface data.
+
+        Will emit new frame index via :attr:`frame_changed`.
+
+        :param int frame_id: The frame index to visualize surface data for.
+        """
         self.frame_id = frame_id
         self.frame_changed.emit(self.frame_id)
         self.make_mesh()
         self.update_scatter()
 
-    def make_mesh(self):
+    def make_mesh(self) -> None:
+        """
+        Create the :class:`GLMeshItem <pyqtgraph.GLMeshItem>` from :attr:`surf_verts` and :attr:`surf_faces` forming
+        the visualized surface.
+        """
         # Instantiate or update the surface mesh
         if self.mesh is None:
             self.mesh = gl.GLMeshItem(vertexes=self.surf_verts[self.frame_id], faces=self.surf_faces, drawEdges=True,
@@ -95,7 +144,10 @@ class SurfaceViewer(QMainWindow):
             self.mesh.setMeshData(vertexes=self.surf_verts[self.frame_id], faces=self.surf_faces)
             self.mesh.meshDataChanged()
 
-    def update_scatter(self):
+    def update_scatter(self) -> None:
+        """
+        Update the :attr:`roi_scatter` visualization of ROIs.
+        """
         # Update the ROI scatter on frame change, but only if it is currently shown
         if self.roi_scatter:
             self.roi_scatter.setData(pos=self.surf_verts[self.frame_id])
@@ -153,7 +205,11 @@ class SurfaceViewer(QMainWindow):
 
         return face_idcs
 
-    def add_toolbar_actions(self):
+    def add_toolbar_actions(self) -> None:
+        """
+        Filling the window's toolbar with actions.
+        """
+        # ComboBox for selecting interpolation method
         interp_box = QComboBox(self)
         interp_box.setObjectName('interp_box')
         interp_box.addItems(['multiquadric', 'inverse', 'gaussian', 'linear', 'cubic', 'quintic', 'thin_plate'])
@@ -161,6 +217,7 @@ class SurfaceViewer(QMainWindow):
         interp_box.currentTextChanged.connect(lambda t: self.change_interpolation(t))
         interp_box.setEnabled(self.interpolation)
 
+        # Individual actions for toggling properties of visualization
         toolbar = QToolBar(self)
         toolbar.addAction('Show ROIs', self.show_rois)
         toolbar.addAction('Enable interpolation', self.toggle_interpolation)
@@ -173,7 +230,10 @@ class SurfaceViewer(QMainWindow):
 
         return toolbar
 
-    def show_rois(self):
+    def show_rois(self) -> None:
+        """
+        Add visualization of individual ROIs as :class:`GLScatterPlotItem <pyqtgraph.GLScatterPlotItem>`.
+        """
         if self.roi_scatter is None:
             self.roi_colors = np.ones((self.surf_verts.shape[0], 4))
             self.roi_colors[:, 3] = 0.5
@@ -190,6 +250,9 @@ class SurfaceViewer(QMainWindow):
         action.triggered.connect(self.hide_rois)
 
     def hide_rois(self):
+        """
+        Remove visualization of individual ROIs.
+        """
         self.view.removeItem(self.roi_scatter)
 
         # Change the button to show the rois on next click
@@ -198,7 +261,15 @@ class SurfaceViewer(QMainWindow):
         action.setText("Show ROIs")
         action.triggered.connect(self.show_rois)
 
-    def highlight_column(self, col):
+    def highlight_column(self, col) -> None:
+        """
+        Highlight a specific column of the surface plot.
+
+        The highlighting is done by overlaying a :class:`GLLinePlotItem <pyqtgraph.GLLinePlotItem>` onto the surface
+        mesh. The data for the line is taken directly from :attr:`surf_verts` data.
+
+        :param int col: Column index to highlight.
+        """
         column_points = self.surf_verts[self.frame_id, col::self.cols]
         if self.column_line is None:
             self.column_line = gl.GLLinePlotItem(pos=column_points, color=(1.0, 0.0, 1.0, 0.75), width=3)
@@ -206,7 +277,11 @@ class SurfaceViewer(QMainWindow):
         else:
             self.column_line.setData(pos=column_points, color=(1.0, 0.0, 1.0, 0.75), width=3)
 
-    def toggle_interpolation(self):
+    def toggle_interpolation(self) -> None:
+        """
+        Toggle interpolation of missing ROIs in the surface data.
+        """
+        # Update the attribute and reflect change in toolbar action
         self.interpolation = not self.interpolation
         self.findChild(QComboBox, 'interp_box').setEnabled(self.interpolation)
 
@@ -218,7 +293,10 @@ class SurfaceViewer(QMainWindow):
         text = 'Disable interpolation' if self.interpolation else 'Enable interpolation'
         action.setText(text)
 
-    def toggle_grid(self):
+    def toggle_grid(self) -> None:
+        """
+        Toggle visualization of the global grid in 3D plot.
+        """
         if self.grid is not None:
             self.view.removeItem(self.grid)
             self.grid = None
@@ -228,18 +306,30 @@ class SurfaceViewer(QMainWindow):
             self.grid.setDepthValue(10)
             self.view.addItem(self.grid)
 
-    def toggle_background(self):
+    def toggle_background(self) -> None:
+        """
+        Toggle background color of 3D plot between black (default) and white.
+        """
         if self.view.opts['bgcolor'] == (0.0, 0.0, 0.0, 1.0):
             self.view.opts['bgcolor'] = (1.0, 1.0, 1.0, 1.0)
         else:
             self.view.opts['bgcolor'] = (0.0, 0.0, 0.0, 1.0)
         self.view.update()
 
-    def change_interpolation(self, function):
+    def change_interpolation(self, function) -> None:
+        """
+        Update the currently used interpolation method and recalculate the processed surface data using it.
+        :param str function: Interpolation function to use.
+        """
         self.interp_function = function
         self.reset_data()  # Update the data to use the newly set function
 
-    def show_displacement(self):
+    def show_displacement(self) -> None:
+        """
+        Add 2D visualization of a single surface column as a separate plot to the viewer.
+
+        The created 2D plot is an instance of :class:`DisplacementPlot`.
+        """
         splitter = QSplitter(Qt.Horizontal)
 
         self.disp_plot = DisplacementPlot(parent=self, data=self.surf_verts, rows=self.rows, cols=self.cols)
@@ -251,13 +341,27 @@ class SurfaceViewer(QMainWindow):
         splitter.addWidget(self.disp_plot)
         self.layout.addWidget(splitter)
 
-    def reset_data(self):
-        # Reset the interpolated data by re-setting the data
+    def reset_data(self) -> None:
+        """
+        Reset the currently visualized data.
+
+        This will perform the following steps new:
+
+        * Preprocess data
+        * Create mesh vertices, faces and create the 3D mesh from them
+        * Update shown ROI scatter
+        """
         self.set_data(self.raw_points)
         self.make_mesh()
         self.update_scatter()
 
-    def color_roi(self, roi_id, color):
+    def color_roi(self, roi_id, color) -> None:
+        """
+        Color a single ROI using the specified color.
+
+        :param int roi_id: Linear index (grid ID) of ROI to color.
+        :param tuple color: (1, 4) Tuple specifying color to use.
+        """
         if self.roi_scatter:
             self.roi_colors[roi_id] = color
             self.roi_scatter.setData(color=self.roi_colors)
@@ -268,6 +372,9 @@ class SurfaceViewer(QMainWindow):
 
 
 class SpaghettiViewer(SurfaceViewer):
+    """
+    **Unfinished** attempt at visualizing ROI displacements over time.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -288,17 +395,30 @@ class SpaghettiViewer(SurfaceViewer):
 
 
 class DisplacementPlot(QWidget):
+    """
+    Custom :pyqt:`QWidget <qwidget>` for visualizing a single column of 3D surface data as 2D plot.
+    """
 
-    column_shown = pyqtSignal(int)
+    column_shown = pyqtSignal(int)  #: PyQtSignal emitting the column index of the visualized column.
 
     def __init__(self, data, rows, cols, *args, **kwargs):
+        """
+        Initialize a new Widget for visualizing the displacement of a single suture grid column based on the calculated
+        surface data.
+
+        :param np.ndarray data: Surface data to visualize.
+        :param int rows: Number of rows in the suture grid.
+        :param int cols: Number of columns in the suture grid.
+        :param args: Further positional arguments are passed on to the :pyqt:`QWidget <qwidget>` initializer.
+        :param kwargs: Further keyword arguments are passed on to the :pyqt:`QWidget <qwidget>` initializer.
+        """
         super().__init__(*args, **kwargs)
 
-        self.data = data
-        self.rows = rows
-        self.cols = cols
-        self.active_col = 0
-        self.frame = None
+        self.data = data  #: Visualized data
+        self.rows = rows  #: Number of rows in suture grid
+        self.cols = cols  #: Number of columns in suture grid
+        self.active_col = 0  #: Active column that is visualized
+        self.frame = None  #: Index of current frame
         self.col_plot = None
 
         self.parent().data_changed.connect(lambda d: self.set_data(d))
@@ -349,10 +469,10 @@ class DisplacementPlot(QWidget):
         """
         Initialize the plotting widget.
 
-        The plotting widget is a :pyqtgraph:`PlotWidget` which has its limits set to the data limits (across all frames)
+        The plotting widget is a :class:`PlotWidget <pyqtgraph.PlotWidget>` which has its limits set to the data limits (across all frames)
         and automatic rescaling of the view enabled.
 
-        :return: :pyqtgraph:`PlotWidget` for plotting of 2D data.
+        :return: :class:`PlotWidget <pyqtgraph.PlotWidget>` for plotting of 2D data.
         """
         pw = pg.PlotWidget(self)
         pw.setMinimumSize(300, 300)
@@ -539,7 +659,7 @@ class CovEllipse(pg.EllipseROI):
     """
     Helper class for plotting covariances in pyqtgraph.
 
-    **Bases**: :pyqtgraph:`EllipseROI`
+    **Bases**: :class:`EllipseROI <pyqtgraph.EllipseROI>`
 
     Only the :func:`__init__` method is modified to have covariance ellipse drawn without cale and rotate handles and
     set the correct ellipse angle without moving the whole ellipse from its set position.
@@ -547,7 +667,7 @@ class CovEllipse(pg.EllipseROI):
     :param tuple pos: (x, y) tuple for setting the position of the bottom-left bounding box corner of the ellipse.
     :param tuple size: (width, height) tuple setting the ellipse size.
     :param float angle: Angle to rotate ellipse by.
-    :param **kwargs: Any additional keywords are passed on to the constructor of :pyqtgraph:`ROI`.
+    :param kwargs: Any additional keywords are passed on to the constructor of :class:`ROI <pyqtgraph.ROI>`.
     """
     def __init__(self, pos, size, angle, **kwargs):
         self.path = None

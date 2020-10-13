@@ -47,6 +47,17 @@ Automation
     nn.datagenerator.RUNetGenerator
     nn.datagenerator.SortNetGenerator
 
+Surface visualization
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+    :toctree: generated
+
+    gui.surface_viewer.SurfaceViewer
+    gui.surface_viewer.SpaghettiViewer
+    gui.surface_viewer.DisplacementPlot
+    gui.surface_viewer.CovEllipse
+
 Modules
 -------
 
