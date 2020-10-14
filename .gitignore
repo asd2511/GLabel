@@ -12,3 +12,4 @@ docs/build
 docs/source/_build
 # Distribution/packaging
 /glabel/build/
+/standalone
