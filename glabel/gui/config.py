@@ -13,9 +13,9 @@ settings = {
     "NumRows":              7,
     "NumCols":              5,
     "StereoGrid":           True,
-    "GridStyle":            0,  # 0 = Buttons; 1 = Pixelmap
-    "AutoMode":             0,  # 0 = Free; 1 = Left-to-Right; 2 = Bottom-to-Top
-    "AutoSnaking":          True,
+    "GridStyle":            1,  # 0 = Buttons; 1 = Pixelmap
+    "AutoMode":             2,  # 0 = Free; 1 = Left-to-Right; 2 = Bottom-to-Top
+    "AutoSnaking":          False,
     "BeginTop":             False,  # Setting pathing to begin at top left (True) or bottom left (False)
     "AutoCopy":             False,
     "ActiveProgressMode":   0,
@@ -26,7 +26,7 @@ settings = {
     "ActiveColor":          'lime',
     "ShowCloseup":          True,
     "ROISnap":              False,  # Snapping ROIs to full-pixel positions
-    "ShowCrosshair":        True
+    "ShowCrosshair":        False
 
 }  #: Default settings applied to the GUI on startup
 
