@@ -503,6 +503,12 @@ def fix_data_bits(img_data) -> np.ndarray:
 
 
 def convert_to_ntboxes(list_boxes) -> List[Box]:
+    """
+    Convert list of float values for bounding boxes to list of namedtuple objects for improved readability.
+
+    :param list list_boxes: Bounding box values.
+    :return: List of :class:`Box` objects.
+    """
     nt_boxes = []
     for frame_idx, frame_boxes in enumerate(list_boxes):
         l_box = frame_boxes[0]
@@ -517,6 +523,14 @@ def convert_to_ntboxes(list_boxes) -> List[Box]:
 
 
 def convert_to_ntpredictions(peaks, id_probs):
+    """
+    Convert individual lists of discrete suture coordinates and inferred ID probabilities to single list of
+    :class:`SortingPrediction` objects.
+
+    :param list peaks: Discrete suture coordinates.
+    :param list id_probs: Grid ID probabilities.
+    :return: List of SortingPrediction namedtuple objects unifying all data of sorting inference.
+    """
     sorted_peaks = []
     for peak, prob in zip(peaks, id_probs):
         sorted_peaks.append(SortingPrediction(pred_id=np.argmax(prob),
@@ -949,9 +963,28 @@ def get_runet_input(img_sequence, boxes, size) -> Tuple[np.ndarray, Box]:
 
 
 def run_suture_detect(img_data, bboxes, net, unet_batch_size, progress_callback, message_callback,
-                      cancel_callback=None):
+                      cancel_callback=None) -> Tuple[np.ndarray, List[List[float]]]:
+    """
+    Perform segmentation of individual sutures.
+
+    :param np.ndarray img_data: Video frames to segment sutures in.
+    :param list bboxes: Bounding boxes as inferred by :func:`run_region_detect`.
+    :param str net: Which neural network architecture to use. Currently only supports 'unet' and 'runet' or path to a
+        saved .h5 model file.
+    :param int unet_batch_size: Batch size to use for segmentation.
+    :param progress_callback: PyQtSignal which is used to indicate progression during inference.
+    :type progress_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :param message_callback: PyQtSignal which is used to transmit messages back to the main GUI thread to be displayed
+        on the progress dialog for inference.
+    :type message_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :param cancel_callback: Callback intended to cancel inference process. Currently not functional!
+    :type cancel_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :return: Tuple of numpy array and list of lists (predictions, boxes).
+        Predictions: The generated segmentation maps.
+        Boxes: The expanded bounding boxes relative to full-sized images specifying where segmentation maps are located.
+    """
     if message_callback:
-        message_callback.emit("Reading RUNet...")
+        message_callback.emit("Reading (R)U-net...")
 
     if net == 'unet':
         model = load_model(unet_model)
@@ -995,7 +1028,14 @@ def run_suture_detect(img_data, bboxes, net, unet_batch_size, progress_callback,
     return np.squeeze(predictions), boxes
 
 
-def load_suture_detect(filename, formatted=False):
+def load_suture_detect(filename, formatted=False) -> Tuple[np.ndarray, List]:
+    """
+    Load suture segmentations from file.
+
+    :param str filename: Path to saved .h5 file.
+    :param bool formatted: If loaded inferences should be returned as formatted data. Not implemented yet!
+    :return: Tuple of segmentation maps and corresponding bounding boxes. Same as :func:`run_suture_detect`.
+    """
     with h5py.File(filename, 'r') as f:
         settings = json.loads(f['settings'][()])
 
@@ -1035,6 +1075,23 @@ def load_suture_detect(filename, formatted=False):
 
 def run_peak_finding(prob_maps, map_boxes, tight_boxes, distance, threshold, progress_callback, message_callback,
                      cancel_callback):
+    """
+    Determine discrete suture coordinates from generated segmentation maps.
+
+    :param np.ndarray prob_maps: Segmentation maps generated in previous automation step.
+    :param list map_boxes: List of lists of bounding boxes for segmentation maps.
+    :param list tight_boxes: List of lists of bounding boxes of suture grid regions generated in first automation step.
+    :param float distance: Distance paramter used by skimage's `peak_local_max` function.
+    :param float threshold: Intensity threshold used by skimage's `peak_local_max` function.
+    :param progress_callback: PyQtSignal which is used to indicate progression during inference.
+    :type progress_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :param message_callback: PyQtSignal which is used to transmit messages back to the main GUI thread to be displayed
+        on the progress dialog for inference.
+    :type message_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :param cancel_callback: Callback intended to cancel inference process. Currently not functional!
+    :type cancel_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :return: List of lists of unsorted discrete suture coordinates per frame.
+    """
     if message_callback:
         message_callback.emit("Finding suture coordinates...")
 
@@ -1071,7 +1128,13 @@ def run_peak_finding(prob_maps, map_boxes, tight_boxes, distance, threshold, pro
     return found_peaks
 
 
-def load_peak_finding(filename):
+def load_peak_finding(filename) -> list:
+    """
+    Load peak finding results from file.
+
+    :param str filename: Path to .json file to load data from.
+    :return: List of unsorted discrete suture coordinates.
+    """
     with open(filename, 'r') as f:
         inf_data = json.load(f)
 
@@ -1095,7 +1158,25 @@ def load_peak_finding(filename):
 
 
 def run_peak_sort(peaks, probability_maps, bboxes, network, batch_size, binary, progress_callback, message_callback,
-                  cancel_callback):
+                  cancel_callback) -> List[SortingPrediction]:
+    """
+    Perform sorting of found discrete suture coordinates into suture grid structure.
+
+    :param list peaks: List of lists of unsorted discrete suture coordinates per frame.
+    :param np.ndarray probability_maps: Segmentation maps generated in second automation step.
+    :param list bboxes: Bounding boxes corresponding to segmentation maps.
+    :param str network: Path to network architecture .h5 file to use.
+    :param int batch_size: Batch size for inference.
+    :param bool binary: Boolean setting for use of binary or certainty values in creation of 'classification maps'.
+    :param progress_callback: PyQtSignal which is used to indicate progression during inference.
+    :type progress_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :param message_callback: PyQtSignal which is used to transmit messages back to the main GUI thread to be displayed
+        on the progress dialog for inference.
+    :type message_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :param cancel_callback: Callback intended to cancel inference process. Currently not functional!
+    :type cancel_callback: PyQt5.QtCore.pyqtBoundSignal.pyqtBoundSignal
+    :return: List of :class:`SortingPrediction` specifying grid ID probabilities for each found suture coordinate.
+    """
     if message_callback:
         message_callback.emit("Reading EfficientNet...")
 
@@ -1122,7 +1203,13 @@ def run_peak_sort(peaks, probability_maps, bboxes, network, batch_size, binary, 
     return sorted_peaks
 
 
-def load_peak_sort(filename):
+def load_peak_sort(filename) -> List[SortingPrediction]:
+    """
+    Load existing sorting inference from file.
+
+    :param str filename: Path to .json file to load inference from.
+    :return: List of :class:`SortingPrediction`.
+    """
     with open(filename, 'r') as f:
         inf_data = json.load(f)
 
