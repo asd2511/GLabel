@@ -202,7 +202,7 @@ def process_sorting_predictions(sorting_preds, img_data):
     :type img_data: np.ndarray
     :return: Processed sorting predictions
     """
-    from nn.suture_detection import SortingPrediction
+    from glabel.nn.suture_detection import SortingPrediction
 
     num_frames = img_data.shape[0]
     sorting_predictions = [[] for _ in range(num_frames)]

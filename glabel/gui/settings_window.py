@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import glob
+import os
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
@@ -562,9 +563,10 @@ class InferenceSettings(QDialog):
         super().__init__(*args, **kwargs)
         self.existing_inferences = existing_inferences
         self.total_frames = total_frames
-        self.saved_darknet_networks = glob.glob('./nn/*.cfg')
-        self.saved_darknet_weights = glob.glob('./nn/*.weights')
-        self.saved_h5_networks = glob.glob('./nn/*.h5')
+        nn_dir = os.path.dirname(os.path.dirname(__file__)) + os.path.sep + 'nn'
+        self.saved_darknet_networks = glob.glob(nn_dir + os.path.sep + '*.cfg')
+        self.saved_darknet_weights = glob.glob(nn_dir + os.path.sep + '*.weights')
+        self.saved_h5_networks = glob.glob(nn_dir + os.path.sep + '*.h5')
 
         self.settings = {}
 
