@@ -631,7 +631,7 @@ class PixelGrid(GridWidget):
 
         # If Shift was held during click -> User wants to reassign the active grid position to the clicked position
         if modifiers == Qt.ShiftModifier:
-            self.request_reassignment(row, col, y, x)
+            self.request_reassignment(row, col)
 
         self.map_mark_pos(y, x, 'reset_hover')  # Remove the hover effect of the clicked pixel
         self.set_active((row, col))

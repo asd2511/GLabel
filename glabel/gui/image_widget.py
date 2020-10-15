@@ -660,8 +660,10 @@ class ImageView(pg.ImageView):
 
         # Ask user if reassignment should happen only on this or on all frames
         reassign_options = ['This frame', 'All frames']
-        choice_dlg = OptionDialog("Reassign ROI only on this frame or on all frames?", reassign_options)
-        choice_idx = choice_dlg.exec_() - 1  # -1 bc. index 0 emitted for canceled dialog
+        # TODO: Disabled option for improved usability --> Find better solution for bulk reassignments
+        choice_idx = 0
+        # choice_dlg = OptionDialog("Reassign ROI only on this frame or on all frames?", reassign_options)
+        # choice_idx = choice_dlg.exec_() - 1  # -1 bc. index 0 emitted for canceled dialog
         if choice_idx == -1:
             # If user canceled the dialog, cancel the reassignment
             return
