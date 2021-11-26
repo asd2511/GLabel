@@ -435,8 +435,7 @@ class Main(QMainWindow):
             .mp4, .avi
 
         All filetypes are using
-        `cv2.VideoCapture <https://docs.opencv.org/2.4/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture>`_
-        to read data.
+        `imageio` together with  `ffmpeg` to read movie files.
 
         :param filename: Path to the path to open.
         :return: The loaded video frames as an array. Returned array will be 4D with axes being [frames, y, x, color].
@@ -448,18 +447,12 @@ class Main(QMainWindow):
         assert any(ft in 'test.mp4' for ft in ['.mp4', '.avi']), f"Unknown filetype of {filename} encountered in " \
                                                                  f"Main.read_video()!"
 
-        capture = cv2.VideoCapture(filename)
-        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        video_data = np.empty((frame_count, frame_height, frame_width, 3), dtype=np.uint8)
-
-        f_count = 0
-        ret = True
-        while f_count < frame_count and ret:
-            ret, video_data[f_count] = capture.read()
-            f_count += 1
+        video_data = np.asarray(io.mimread(filename, memtest=False))
+        
+        # Convert to grayscale if it is color
+        if video_data.shape[-1] == 3:
+            video_data = video_data[..., 0]
 
         return video_data
 

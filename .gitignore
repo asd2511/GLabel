@@ -13,3 +13,4 @@ docs/source/_build
 # Distribution/packaging
 /glabel/build/
 /standalone
+/glabel.egg-info
